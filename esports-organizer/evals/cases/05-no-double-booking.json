@@ -1,0 +1,15 @@
+{
+  "name": "No double-booking — team A in two matches with overlapping availability",
+  "input": {
+    "bracket": { "rounds": [{ "name":"R1", "matches":[
+      { "id":"M1","teamA":"A","teamB":"B","durationMinutes":60 },
+      { "id":"M2","teamA":"A","teamB":"C","durationMinutes":60 }
+    ]}]},
+    "availability": {
+      "A": [{"start":"2026-06-01T18:00:00Z","end":"2026-06-01T20:00:00Z"}],
+      "B": [{"start":"2026-06-01T18:00:00Z","end":"2026-06-01T20:00:00Z"}],
+      "C": [{"start":"2026-06-01T18:00:00Z","end":"2026-06-01T20:00:00Z"}]
+    }
+  },
+  "expect": { "scheduled": ["M1","M2"], "conflicts": [], "noOverlap": true }
+}

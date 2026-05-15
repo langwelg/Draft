@@ -1,0 +1,17 @@
+{
+  "name": "esports-organizer",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "eval": "node evals/run.mjs",
+    "eval:llm": "node evals/run.mjs --llm"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.4",
+    "openai": "^4.9.0"
+  }
+}

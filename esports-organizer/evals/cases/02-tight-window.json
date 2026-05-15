@@ -1,0 +1,13 @@
+{
+  "name": "Tight window — 90min match, exactly 90min overlap",
+  "input": {
+    "bracket": { "rounds": [{ "name":"R1", "matches":[
+      { "id":"M1","teamA":"A","teamB":"B","durationMinutes":90 }
+    ]}]},
+    "availability": {
+      "A": [{"start":"2026-06-01T19:00:00Z","end":"2026-06-01T20:30:00Z"}],
+      "B": [{"start":"2026-06-01T19:00:00Z","end":"2026-06-01T20:30:00Z"}]
+    }
+  },
+  "expect": { "scheduled": ["M1"], "conflicts": [] }
+}

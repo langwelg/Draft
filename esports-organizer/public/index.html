@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Esports Organizer</title>
+<style>
+  :root { --bg:#0b0f17; --panel:#121826; --ink:#e6edf7; --muted:#8b97ad; --accent:#7c5cff; --good:#34d399; --bad:#f87171; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto; }
+  header { padding:24px 32px; border-bottom:1px solid #1f2738; }
+  h1 { margin:0; font-size:20px; letter-spacing:.3px; }
+  small { color:var(--muted); }
+  main { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:16px 32px; }
+  .panel { background:var(--panel); border:1px solid #1f2738; border-radius:12px; padding:16px; }
+  textarea { width:100%; min-height:240px; background:#0a0e17; color:var(--ink); border:1px solid #243049; border-radius:8px; padding:10px; font:12px ui-monospace,Menlo,Consolas,monospace; }
+  button { background:var(--accent); color:white; border:0; padding:10px 16px; border-radius:8px; font-weight:600; cursor:pointer; }
+  button[disabled]{opacity:.6;cursor:wait}
+  .row { display:flex; gap:8px; align-items:center; margin-top:8px; }
+  pre { background:#0a0e17; border:1px solid #243049; border-radius:8px; padding:12px; overflow:auto; max-height:520px; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; }
+  .pill.openai{ background:#1e293b; color:#a5b4fc;}
+  .pill.fallback{ background:#1e293b; color:#fbbf24;}
+  .conflict { color:var(--bad); }
+  .ok { color:var(--good); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎮 Esports Organizer</h1>
+  <small>Bracket + availability → conflict-aware schedule. LLM with deterministic fallback.</small>
+</header>
+<main>
+  <section class="panel">
+    <label>Bracket JSON</label>
+    <textarea id="bracket"></textarea>
+    <label style="margin-top:12px;display:block">Availability JSON</label>
+    <textarea id="availability"></textarea>
+    <div class="row">
+      <button id="go">Generate schedule</button>
+      <button id="sample" style="background:#243049">Load sample</button>
+      <span id="status" style="color:var(--muted)"></span>
+    </div>
+  </section>
+  <section class="panel">
+    <div class="row" style="justify-content:space-between">
+      <strong>Result</strong>
+      <span id="method"></span>
+    </div>
+    <div id="summary" style="margin:8px 0"></div>
+    <pre id="out">Run a schedule to see output…</pre>
+  </section>
+</main>
+<script>
+const SAMPLE_BRACKET = {
+  name: "Spring Showdown 2026",
+  rounds: [
+    { name: "Quarterfinals", matches: [
+      { id:"QF1", teamA:"NovaWolves",      teamB:"PixelPhantoms",  durationMinutes:90, earliest:"2026-05-20T17:00:00Z", latest:"2026-05-20T23:00:00Z" },
+      { id:"QF2", teamA:"ShadowSyndicate", teamB:"NeonDrakes",     durationMinutes:90, earliest:"2026-05-20T17:00:00Z", latest:"2026-05-20T23:00:00Z" },
+      { id:"QF3", teamA:"GhostProtocol",   teamB:"RogueCircuit",   durationMinutes:90 },
+    ]},
+    { name: "Semifinals", matches: [
+      { id:"SF1", teamA:"NovaWolves", teamB:"ShadowSyndicate", durationMinutes:90, earliest:"2026-05-22T18:00:00Z", latest:"2026-05-22T23:59:00Z" },
+    ]},
+  ],
+};
+const SAMPLE_AVAIL = {
+  NovaWolves:      [{start:"2026-05-20T18:00:00Z",end:"2026-05-20T22:00:00Z"},{start:"2026-05-22T19:00:00Z",end:"2026-05-22T23:00:00Z"}],
+  PixelPhantoms:   [{start:"2026-05-20T19:00:00Z",end:"2026-05-20T21:30:00Z"}],
+  ShadowSyndicate: [{start:"2026-05-20T20:00:00Z",end:"2026-05-20T23:00:00Z"},{start:"2026-05-22T20:00:00Z",end:"2026-05-22T23:00:00Z"}],
+  NeonDrakes:      [{start:"2026-05-20T17:00:00Z",end:"2026-05-20T19:00:00Z"}],
+  GhostProtocol:   [{start:"2026-05-21T18:00:00Z",end:"2026-05-21T22:00:00Z"}],
+  RogueCircuit:    [{start:"2026-05-21T19:00:00Z",end:"2026-05-21T23:00:00Z"}],
+};
+const $ = (id) => document.getElementById(id);
+$('sample').onclick = () => {
+  $('bracket').value = JSON.stringify(SAMPLE_BRACKET, null, 2);
+  $('availability').value = JSON.stringify(SAMPLE_AVAIL, null, 2);
+};
+$('sample').click();
+$('go').onclick = async () => {
+  $('go').disabled = true; $('status').textContent = 'Scheduling…';
+  try {
+    const r = await fetch('/api/schedule', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ bracketText: $('bracket').value, availabilityText: $('availability').value }),
+    });
+    const j = await r.json();
+    $('method').innerHTML = `<span class="pill ${j.method||''}">${j.method||'?'}</span>`;
+    const s = j.schedule?.length || 0, c = j.conflicts?.length || 0;
+    $('summary').innerHTML = `<span class="ok">✓ ${s} scheduled</span> · <span class="conflict">⚠ ${c} conflicts</span>`;
+    $('out').textContent = JSON.stringify(j, null, 2);
+  } catch (e) { $('out').textContent = 'Error: ' + e.message; }
+  finally { $('go').disabled = false; $('status').textContent = ''; }
+};
+</script>
+</body>
+</html>
