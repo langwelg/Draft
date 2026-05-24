@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: cd esports-organizer && npm install
-    startCommand: cd esports-organizer && npm start
+startCommand: cd esports-organizer && npm start
     envVars:
       - key: OPENAI_API_KEY
         sync: false
